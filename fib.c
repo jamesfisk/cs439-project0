@@ -60,7 +60,43 @@ int main(int argc, char **argv)
 static void 
 doFib(int n, int doPrint)
 {
-  
+int status;
+int status2;
+
+	if (n <= 1){
+		if(doPrint){printf("%d\n", 0);}		
+		exit(0);}
+
+	else if (n < 3){
+		if (doPrint){printf("%d\n", 1);}
+		exit(1);}
+	else{
+		//create two children, decrement n by two in child1 and one in child2
+		pid_t pid_child = fork();
+		if (pid_child == 0){n = n - 1;
+			doPrint = 0;
+		}
+		
+		pid_t pid_child2 = fork();
+		if (pid_child2 == 0){n = n - 1;}
+		
+		//parent code	
+		if (pid_child2 != 0){
+      		
+			wait(&status);
+			status = WEXITSTATUS(status);
+		    
+			wait(&status2);
+			status2 = WEXITSTATUS(status2);
+			if (doPrint == 1){
+			printf("%d\n", status + status2);
+			}
+			exit(status + status2);
+		}
+		//child code6
+		else{doFib(n, 0);}
+	
+	}
 }
 
 

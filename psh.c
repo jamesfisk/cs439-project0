@@ -104,6 +104,17 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline) 
 {
+    char cmd[] = "quit";
+    
+		char* delim = " ";
+
+    while(cmdline != NULL)
+			//continue here
+
+		}	
+		if(strcmp(cmd,cmdline) == 0)
+	    {builtin_cmd(); }
+    
     return;
 }
 
@@ -116,6 +127,8 @@ void eval(char *cmdline)
  */
 int builtin_cmd(char **argv) 
 {
+		
+		exit(0);
     return 0;     /* not a builtin command */
 }
 
