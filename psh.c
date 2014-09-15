@@ -29,6 +29,7 @@ static char prompt[] = "psh> ";    /* command line prompt (DO NOT CHANGE) */
 /* Here are the functions that you will implement */
 void eval(char *cmdline);
 int builtin_cmd(char **argv);
+char** split(char *cmdline);
 
 /* Here are helper routines that we've provided for you */
 void usage(void);
@@ -104,17 +105,20 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline) 
 {
-    char cmd[] = "quit";
-    
-		char* delim = " ";
+		//initialize array of arguments
+  	char** args = (char**)malloc(20*sizeof(char*));
+		int i = 0;
 
-    while(cmdline != NULL)
-			//continue here
+		for(i = 0; i < 20; i++){
+			args[i] = (char *)malloc(20*sizeof(char));}
 
-		}	
-		if(strcmp(cmd,cmdline) == 0)
-	    {builtin_cmd(); }
-    
+
+		parseline(cmdline, args);
+		if(builtin_cmd(args) == 0){
+			pid_t pid_child = fork();
+			if(pid_child == 0){
+				int exec_status = execl(args[0], args[1], NULL);}
+			}
     return;
 }
 
@@ -127,9 +131,30 @@ void eval(char *cmdline)
  */
 int builtin_cmd(char **argv) 
 {
-		
-		exit(0);
+		if(strcmp(argv[0], "quit") == 0){
+			exit(0);
+			return 1;}
     return 0;     /* not a builtin command */
+}
+
+//return array of strings of command line
+char** split(char* cmdline){
+		char** args = (char**)malloc(20*sizeof(char*));
+		int i = 0;
+
+		for(i = 0; i < 20; i++){
+			args[i] = (char *)malloc(20*sizeof(char));}
+
+		i = 0;
+		char *substring = NULL;
+ 		substring = strtok(cmdline, " ");
+
+ 		 while (substring != NULL){
+     		args[i] = substring;
+     		i++;
+     		substring = strtok(NULL, " ");}
+		i = 0;
+	return args;
 }
 
 
