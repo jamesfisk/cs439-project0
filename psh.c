@@ -105,6 +105,7 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline) 
 {
+		int status;
 		//initialize array of arguments
   	char** args = (char**)malloc(20*sizeof(char*));
 		int i = 0;
@@ -113,11 +114,16 @@ void eval(char *cmdline)
 			args[i] = (char *)malloc(20*sizeof(char));}
 
 
-		parseline(cmdline, args);
+		int bg = parseline(cmdline, args);
 		if(builtin_cmd(args) == 0){
 			pid_t pid_child = fork();
 			if(pid_child == 0){
-				int exec_status = execl(args[0], args[1], NULL);}
+				if(execve(args[0], args, environ) < 0){
+					printf("Command not found");
+					exit(0);}
+				}
+			if(bg){
+				wait(&status);}
 			}
     return;
 }
