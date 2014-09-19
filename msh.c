@@ -101,7 +101,7 @@ int main(int argc, char **argv)
 	    exit(0);
 	}
 
-	/* Evaluate the command line */
+	/* Evaluate the comma/jobsnd line */
 	eval(cmdline);
 	fflush(stdout);
 	fflush(stdout);
@@ -127,26 +127,42 @@ void eval(char *cmdline)
     char buf[MAXLINE];          /* Holds modified command line */
     int bg;                     /* Should the job run in bg or fg? */
     pid_t pid;                  /* Process id */
+    struct job_t *newJob;
 
     strcpy(buf, cmdline);
     bg = parseline(buf, argv);
     if (argv[0] == NULL) return;   /* Ignore empty lines */
 
     if (!builtin_cmd(argv))
-    {if ((pid = fork()) == 0)       /* Child runs user job */
-     {if (execv(argv[0],argv) < 0)
-      {     printf("%s: Command not found.\n", argv[0]);
-           exit(0);
-      }
+    {	
+				if ((pid = fork()) == 0)       /* Child runs user job */
+     		{   
+						if (execv(argv[0],argv) < 0)
+      			{  	printf("%s: Command not found.\n", argv[0]);
+            		exit(0);
+      			}
+     		}
+
+		
+     		if (!bg) // Foreground Process - Parent Waits
+     		{		
+		 			addjob(jobs, pid, 1, cmdline);							// Parent adds process to job
+        	waitfg(pid);																// Parent waits for Child
+					newJob = getjobpid(jobs,pid);								// newJob = Child
+        
+					if (newJob != NULL  && newJob->state != 3)  // if (Child !NULL and !Stopped)
+					{
+						kill(pid,SIGKILL);												// kill child
+						deletejob(jobs,pid);											// delete child from joblist
+					}
+				}else // Background Process
+				{
+					addjob(jobs,pid,2,cmdline);
+					newJob = getjobpid(jobs,pid);								// newJob = Child
+					printf("%d %s", pid, cmdline);					 
+				}
      }
-     /* Parent waits for foreground job to terminate */
-     if (!bg)
-     {
-         int status;
-            if (waitpid(pid, &status, 0) < 0)
-                unix_error("waitfg: waitpid error");
-     } else printf("%d %s", pid, cmdline);
-    }
+
     return;
 }
 
@@ -161,12 +177,26 @@ void eval(char *cmdline)
  */
 int builtin_cmd(char **argv)
 {
-    if (!strcmp(argv[0], "quit")) /* quit command */
-        exit(0);
-    if (!strcmp(argv[0], "&"))
-        return 1;
-
-return 0;
+    if (!strcmp(argv[0], "quit"))		 // QUIT MSH
+    {
+		    exit(0);
+		}
+		if (!strcmp(argv[0], "jobs"))		// Call jobs - list current jobs
+		{
+				listjobs(jobs);
+				return 1;
+		}
+		if (	(!strcmp(argv[0], "bg")) ||  //Determines bg fg
+			 		(!strcmp(argv[0], "fg")))
+		{
+				do_bgfg(argv);
+				return 1;
+		}
+    if (!strcmp(argv[0], "&"))			// This is a recognized command,
+		{																//  but ignored as single command
+				return 1;	
+		}
+return 0;		// Not a Built-in Command
 }
 
 
@@ -175,15 +205,45 @@ return 0;
  */
 void do_bgfg(char **argv) 
 {
-    return;
+		if (!strcmp(argv[0], "bg")){
+			int id = atoi(argv[1]);				// passed 	pid or jid
+
+			if (id > 16){
+				if ((*getjobpid(jobs, id)).state == 3){
+	  			(*getjobpid(jobs, id)).state = 2;
+		  		kill(SIGCONT, id);
+				}}
+			else{
+				if((*getjobjid(jobs, id)).state == 3){
+				  (*getjobjid(jobs, id)).state = 2;
+				  kill(SIGCONT, (*getjobjid(jobs, id)).pid);
+				}}
+			return; 
+		}
+		if (!strcmp(argv[0], "fg")){
+			int id = atoi(argv[1]);				// passed 	pid or jid
+			
+			if (id > 16){
+			if((*getjobpid(jobs, id)).state != 1){
+				(*getjobpid(jobs, id)).state = 1;
+				kill(SIGCONT, id);}}
+			else{
+				if((*getjobjid(jobs, id)).state != 1){
+					(*getjobjid(jobs, id)).state = 1;
+				kill(SIGCONT, (*getjobjid(jobs, id)).pid);}}
+			return; 
+		}
+    if (!strcmp(argv[0], "&"))
+        return;
 }
 
 /* 
  * waitfg - Block until process pid is no longer the foreground process
  */
 void waitfg(pid_t pid)
-{
-    return;
+{	int status;
+	if(waitpid(-1,&status,0)<0)
+		unix_error("waitfg: waitpid error");	
 }
 
 /*****************
@@ -209,7 +269,11 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig) 
 {
-    return;
+
+
+
+
+   return;
 }
 
 /*
