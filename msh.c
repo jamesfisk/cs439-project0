@@ -121,10 +121,36 @@ int main(int argc, char **argv)
  * background children don't receive SIGINT (SIGTSTP) from the kernel
  * when we type ctrl-c (ctrl-z) at the keyboard.  
 */
-void eval(char *cmdline) 
+void eval(char *cmdline)
 {
+    char *argv[MAXARGS];        /* Argument list execve() */
+    char buf[MAXLINE];          /* Holds modified command line */
+    int bg;                     /* Should the job run in bg or fg? */
+    pid_t pid;                  /* Process id */
+
+    strcpy(buf, cmdline);
+    bg = parseline(buf, argv);
+    if (argv[0] == NULL) return;   /* Ignore empty lines */
+
+    if (!builtin_cmd(argv))
+    {if ((pid = fork()) == 0)       /* Child runs user job */
+     {if (execv(argv[0],argv) < 0)
+      {     printf("%s: Command not found.\n", argv[0]);
+           exit(0);
+      }
+     }
+     /* Parent waits for foreground job to terminate */
+     if (!bg)
+     {
+         int status;
+            if (waitpid(pid, &status, 0) < 0)
+                unix_error("waitfg: waitpid error");
+     } else printf("%d %s", pid, cmdline);
+    }
     return;
 }
+
+
 
 
 /* 
@@ -133,10 +159,16 @@ void eval(char *cmdline)
  * Return 1 if a builtin command was executed; return 0
  * if the argument passed in is *not* a builtin command.
  */
-int builtin_cmd(char **argv) 
+int builtin_cmd(char **argv)
 {
-    return 0;     /* not a builtin command */
+    if (!strcmp(argv[0], "quit")) /* quit command */
+        exit(0);
+    if (!strcmp(argv[0], "&"))
+        return 1;
+
+return 0;
 }
+
 
 /* 
  * do_bgfg - Execute the builtin bg and fg commands
@@ -161,7 +193,7 @@ void waitfg(pid_t pid)
 /* 
  * sigchld_handler - The kernel sends a SIGCHLD to the shell whenever
  *     a child job terminates (becomes a zombie), or stops because it
- *     received a SIGSTOP or SIGTSTP signal. The handler reaps all
+      received a SIGSTOP or SIGTSTP signal. The handler reaps all
  *     available zombie children, but doesn't wait for any other
  *     currently running children to terminate.  
  */

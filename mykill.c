@@ -9,5 +9,11 @@
 
 int main(int argc, char **argv)
 {
+	if (argc < 2){
+		printf("Too few arguments");}
+	else{
+		int killpid = atoi(argv[1]);
+		kill(killpid, SIGUSR1);
+	}	
   return 0;
 }

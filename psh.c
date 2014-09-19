@@ -114,11 +114,11 @@ void eval(char *cmdline)
     bg = parseline(buf, argv);
     if (argv[0] == NULL) return;   /* Ignore empty lines */
     
-    if (!builtin_command(argv))
-    {if ((pid = Fork()) == 0)       /* Child runs user job */
-     {if (execve(argv[0], argv, environ) < 0)
+    if (!builtin_cmd(argv))
+    {if ((pid = fork()) == 0)       /* Child runs user job */
+     {if (execv(argv[0],argv) < 0)
       {     printf("%s: Command not found.\n", argv[0]);
-            exit(0);
+	   exit(0);	
       }
      }
      /* Parent waits for foreground job to terminate */
@@ -134,13 +134,14 @@ void eval(char *cmdline)
 
 
 /* If first arg is a builtin command, run it and return true */
-int builtin_command(char **argv)
+int builtin_cmd(char **argv)
 {
     if (!strcmp(argv[0], "quit")) /* quit command */
         exit(0);
     if (!strcmp(argv[0], "&"))
         return 1;
-    return 0;
+    
+return 0;
 }
     /* Ignore singleton & */
     /* Not a builtin command */
@@ -178,13 +179,16 @@ int builtin_command(char **argv)
  * Return 1 if a builtin command was executed; return 0
  * if the argument passed in is *not* a builtin command.
  */
+/*
 int builtin_cmd(char **argv) 
 {
 		if(strcmp(argv[0], "quit") == 0){
 			exit(0);
 			return 1;}
-    return 0;     /* not a builtin command */
+    return 0;      not a builtin command 
 }
+*/
+
 
 //return array of strings of command line
 char** split(char* cmdline){

@@ -29,8 +29,7 @@ void signal_callback_handler2(){
 		ssize_t bytes;
 		const int STDOUT = 1;
 		bytes = write(STDOUT, "exiting\n", 10);
-		if(bytes != 10)
-			exit(1);
+		exit(1);
 }
 
 int main(int argc, char **argv)
