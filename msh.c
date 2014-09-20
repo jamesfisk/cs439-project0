@@ -137,6 +137,7 @@ void eval(char *cmdline)
     {	
 				if ((pid = fork()) == 0)       /* Child runs user job */
      		{   
+						setpgid(pid, pid);				//Establish process group ID
 						if (execv(argv[0],argv) < 0)
       			{  	printf("%s: Command not found.\n", argv[0]);
             		exit(0);
@@ -159,7 +160,7 @@ void eval(char *cmdline)
 				{
 					addjob(jobs,pid,2,cmdline);
 					newJob = getjobpid(jobs,pid);								// newJob = Child
-					printf("%d %s", pid, cmdline);					 
+					printf("[%d] (%d) %s", (*getjobpid(jobs, pid)).jid, pid, cmdline);					 
 				}
      }
 
@@ -177,6 +178,7 @@ void eval(char *cmdline)
  */
 int builtin_cmd(char **argv)
 {
+		listjobs(jobs);
     if (!strcmp(argv[0], "quit"))		 // QUIT MSH
     {
 		    exit(0);
@@ -186,9 +188,12 @@ int builtin_cmd(char **argv)
 				listjobs(jobs);
 				return 1;
 		}
-		if (	(!strcmp(argv[0], "bg")) ||  //Determines bg fg
-			 		(!strcmp(argv[0], "fg")))
-		{
+		if (!strcmp(argv[0], "bg")){  //Determines bg fg
+				printf("hit here\n");
+				do_bgfg(argv);
+				return 1;}
+		if (!strcmp(argv[0], "fg")){
+				printf("hit\n");
 				do_bgfg(argv);
 				return 1;
 		}
@@ -206,8 +211,26 @@ return 0;		// Not a Built-in Command
 void do_bgfg(char **argv) 
 {
 		if (!strcmp(argv[0], "bg")){
-			int id = atoi(argv[1]);				// passed 	pid or jid
+			
+			char* id = argv[1];				// passed 	pid or jid
+			printf("i mae it here\n");
 
+			if(id[0] == "%"){					// if jid
+				id += 1;
+				printf("here's my value: %s\n", id);
+				int jid = atoi(id);
+				if ((*getjobjid(jobs, jid)).state == 3){
+					(*getjobjid(jobs, jid)).state = 2;
+					kill(SIGCONT, id);
+				}}
+			else{
+				int pid = atoi(id);
+				if ((*getjobpid(jobs, pid)).state == 3){
+	  			(*getjobpid(jobs, pid)).state = 2;
+		  		kill(SIGCONT, id);
+				}}
+		}
+		/*			
 			if (id > 16){
 				if ((*getjobpid(jobs, id)).state == 3){
 	  			(*getjobpid(jobs, id)).state = 2;
@@ -232,7 +255,7 @@ void do_bgfg(char **argv)
 					(*getjobjid(jobs, id)).state = 1;
 				kill(SIGCONT, (*getjobjid(jobs, id)).pid);}}
 			return; 
-		}
+		}*/
     if (!strcmp(argv[0], "&"))
         return;
 }
@@ -270,9 +293,17 @@ void sigchld_handler(int sig)
 void sigint_handler(int sig) 
 {
 
+	pid_t pidkill = fgpid(jobs);
 
+	char str[80];
+	sprintf(str, "Job [%d] (%d) terminated by signal 2", (*getjobpid(jobs, pidkill)).jid, pidkill);
+	puts(str);
+	deletejob(jobs, pidkill);
+	if (pidkill != 0){
+		kill(getpgid(pidkill), SIGINT);
+		}
 
-
+	//need to kill all child processes
    return;
 }
 
@@ -283,6 +314,17 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
+		pid_t pidstop = fgpid(jobs);
+		
+		char str[80];
+		sprintf(str, "Job[%d] (%d) stopped by signal 20", (*getjobpid(jobs, pidstop)).jid, pidstop);
+		puts(str);
+		(*getjobpid(jobs, pidstop)).state = 3;
+		if (pidstop != 0){
+			kill(getpgid(pidstop), SIGTSTP);
+		}	
+
+		//need to stop all child processes.
     return;
 }
 
