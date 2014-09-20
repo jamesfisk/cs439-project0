@@ -208,28 +208,62 @@ return 0;		// Not a Built-in Command
 /* 
  * do_bgfg - Execute the builtin bg and fg commands
  */
-void do_bgfg(char **argv) 
+void do_bgfg(char **argv)
 {
-		if (!strcmp(argv[0], "bg")){
-			
-			char* id = argv[1];				// passed 	pid or jid
-			printf("i mae it here\n");
+    struct job_t *bgfgJob;
+    char pc = argv[1][0];
+    int tmp;
+    int input;              // passed PID or JID
+    
+    /*  bg command      */
+    if (!strcmp(argv[0], "bg"))
+    {
+        if (pc == '%')
+        {
+            tmp = argv[1][1] - 48;
+            bgfgJob = getjobjid(jobs, tmp);    //Get Job by JID
+            
+        }else
+        {
+            tmp = atoi(argv[1]);
+            bgfgJob = getjobpid(jobs, tmp);   // Get job by PID
+            
+        }
+        
+        printf("[%d] (%d) %s", bgfgJob->jid, bgfgJob->pid, bgfgJob->cmdline);
+        
+        kill(bgfgJob->pid, SIGCONT);           //send SIGCONT signal to process
+        bgfgJob->state = BG;
+        
+        
+    }
+    
+    /*  fg command      */
+    if(!strcmp(argv[0], "fg"))
+    {
+        if(pc == '%')
+        {
+            tmp = argv[1][1] - 48;
+            bgfgJob = getjobjid(jobs, tmp);   //Get job by JID
+        }
+        else
+        {
+            tmp = atoi(argv[1]);
+            bgfgJob = getjobpid(jobs, tmp);    // Get job by JID
+        }
+        
+        if(bgfgJob != NULL)
+        {
+            waitfg(bgfgJob->pid);
+            kill(bgfgJob->pid,SIGCONT);         //Send SIGCONT
+            
+            if(bgfgJob->state != 3)             // If Terminated
+                deletejob(jobs, bgfgJob->pid);  // DELETE JOB
+            
+        }   
+        
+    }return;
 
-			if(id[0] == "%"){					// if jid
-				id += 1;
-				printf("here's my value: %s\n", id);
-				int jid = atoi(id);
-				if ((*getjobjid(jobs, jid)).state == 3){
-					(*getjobjid(jobs, jid)).state = 2;
-					kill(SIGCONT, id);
-				}}
-			else{
-				int pid = atoi(id);
-				if ((*getjobpid(jobs, pid)).state == 3){
-	  			(*getjobpid(jobs, pid)).state = 2;
-		  		kill(SIGCONT, id);
-				}}
-		}
 		/*			
 			if (id > 16){
 				if ((*getjobpid(jobs, id)).state == 3){
@@ -256,8 +290,6 @@ void do_bgfg(char **argv)
 				kill(SIGCONT, (*getjobjid(jobs, id)).pid);}}
 			return; 
 		}*/
-    if (!strcmp(argv[0], "&"))
-        return;
 }
 
 /* 
